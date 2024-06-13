@@ -46,13 +46,40 @@ def get_price_data_from_excel(file_paths, tickers):
     return combined_df
 
 def select_growth_and_value_stocks(df, start_date, end_date, top_n):
-    start_date = pd.to_datetime(start_date)
-    end_date = pd.to_datetime(end_date)
-    df = df.loc[:, start_date:end_date]
-    average_pb_ratios = df.mean(axis=1)
+    # 將 DataFrame 的列標題轉換為字符串格式的日期
+    df.columns = pd.to_datetime(df.columns, format='%Y/%m/%d').strftime('%Y-%m-%d')
+    df.columns = df.columns.str.strip()  # 去除空格
+    df.columns = df.columns.astype(str)
+    # 將 start_date 和 end_date 轉換為無時間部分的日期格式
+    start_date = pd.to_datetime(start_date).strftime('%Y-%m-%d')
+    end_date = pd.to_datetime(end_date).strftime('%Y-%m-%d')
+
+
+    # 檢查 start_date 和 end_date 是否在 DataFrame 的列標題中
+    if start_date not in df.columns:
+        print(f"日期範圍錯誤：start_date {start_date} 不在 DataFrame 的列標題中")
+    if end_date not in df.columns:
+        print(f"日期範圍錯誤：end_date {end_date} 不在 DataFrame 的列標題中")
+
+    # 選取指定日期範圍內的數據
+    df_selected = df.loc[:, end_date:start_date]
+    print("選取的 DataFrame：", df_selected)
+
+    # 確認選取的 DataFrame 不為空
+    if df_selected.empty:
+        print("選取的 DataFrame 為空，請檢查日期範圍。")
+
+    # 計算平均PB比率
+    average_pb_ratios = df_selected.mean(axis=1)
+    print(average_pb_ratios)
+
+    # 按平均PB比率排序
     pb_sorted = average_pb_ratios.sort_values()
+
+    # 選取最便宜和最貴的股票
     value_stocks = pb_sorted.head(top_n).index.tolist()
     growth_stocks = pb_sorted.tail(top_n).index.tolist()
+
     return growth_stocks, value_stocks
 
 def calculate_daily_returns(data):
